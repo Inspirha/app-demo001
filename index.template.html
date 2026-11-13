@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transferencia de Propiedad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2430;--mute:#667085;--line:#e3e6eb;--a:#2457c5;--b:#e07a1f;--ok:#1a7f4b;--bad:#c0392b}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12161c;--card:#1a2029;--ink:#e8ecf2;--mute:#97a1b0;--line:#2a323d;--a:#6f9bff;--b:#f0a15a;--ok:#4cc38a;--bad:#ef7b6e}}
+:root[data-theme=dark]{--bg:#12161c;--card:#1a2029;--ink:#e8ecf2;--mute:#97a1b0;--line:#2a323d;--a:#6f9bff;--b:#f0a15a;--ok:#4cc38a;--bad:#ef7b6e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:16px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font:inherit}
+.tab[aria-selected=true]{background:var(--a);border-color:var(--a);color:#fff}
+.filters{display:flex;gap:12px;flex-wrap:wrap;align-items:end;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
+.filters label{display:flex;flex-direction:column;font-size:12px;color:var(--mute);gap:3px}
+select,button.btn{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
+button.btn{cursor:pointer}
+button.btn:hover{border-color:var(--a)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi small{color:var(--mute);display:block;font-size:12px}
+.kpi b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--mute)}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card h2{font-size:14px;margin:0 0 8px;font-weight:600}
+.card .hint{font-size:12px;color:var(--mute);margin:-4px 0 6px}
+.ch{position:relative;height:300px}
+.full .ch{height:340px}
+.tw{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{position:sticky;top:0;background:var(--card);font-size:12px;color:var(--mute)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+footer{color:var(--mute);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Transferencia de Propiedad y Compraventa Predial SID</h1>
+  <div class="sub" id="sub">SUNARP · Registro de Propiedad Inmueble</div>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-k="transferencias" aria-selected="true">Transferencias de propiedad</button>
+    <button class="tab" role="tab" data-k="sid" aria-selected="false">Compraventa predial SID</button>
+    <button class="tab" role="tab" data-k="comp" aria-selected="false">Comparativo</button>
+  </div>
+
+  <div class="filters">
+    <label>Departamento<select id="dep"></select></label>
+    <label>Desde<select id="desde"></select></label>
+    <label>Hasta<select id="hasta"></select></label>
+    <label>Vista del gráfico<select id="gran"><option value="m">Mensual</option><option value="a">Anual</option></select></label>
+    <button class="btn" id="reset">Restablecer</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card full" style="margin-bottom:12px">
+    <h2 id="t1"></h2>
+    <div class="ch"><canvas id="c1"></canvas></div>
+  </div>
+
+  <div class="grid" id="grid2">
+    <div class="card"><h2 id="t2">Ranking por departamento</h2><div class="hint">Haz clic en una barra para filtrar ese departamento.</div><div class="ch" style="height:420px"><canvas id="c2"></canvas></div></div>
+    <div class="card"><h2 id="t3"></h2><div class="ch" style="height:420px"><canvas id="c3"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0" id="t4">Detalle mensual</h2>
+      <div>
+        <button class="btn" id="dlTabla">Descargar tabla (CSV)</button>
+        <button class="btn" id="dlTodo">Descargar todos los datos (CSV)</button>
+      </div>
+    </div>
+    <div class="tw"><table id="tabla"></table></div>
+  </div>
+
+  <footer>Fuente: SUNARP (archivos Excel de datos abiertos). Las cifras de Lima incluyen la Provincia Constitucional del Callao. Los datos del SID inician en diciembre de 2016. La relación SID/transferencias puede superar 100 %: son registros distintos, no uno subconjunto del otro.</footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const MES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const fmt = n => Math.round(n).toLocaleString("es-PE");
+const lbl = m => MES[+m.slice(5)-1] + " " + m.slice(0,4);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NAC = "TOTAL NACIONAL";
+const S = {tab:"transferencias", dep:NAC, desde:null, hasta:null, gran:"m"};
+const charts = {};
+const $ = id => document.getElementById(id);
+
+function serie(k, dep){ const d = DATA[k]; return dep===NAC ? d.total : d.deps[dep]; }
+function rango(k){
+  const ms = DATA[k].meses; let i0 = ms.indexOf(S.desde), i1 = ms.indexOf(S.hasta);
+  if(i0<0) i0=0; if(i1<0) i1=ms.length-1; return [i0,i1];
+}
+const allMonths = () => DATA.transferencias.meses;
+
+function initFilters(){
+  const deps = Object.keys(DATA.transferencias.deps);
+  $("dep").innerHTML = [NAC,...deps].map(d=>`<option>${d}</option>`).join("");
+  const ys = [...new Set(allMonths().map(m=>m.slice(0,4)))];
+  $("desde").innerHTML = ys.map(y=>`<option>${y}</option>`).join("");
+  $("hasta").innerHTML = ys.map(y=>`<option>${y}</option>`).join("");
+  reset();
+}
+function reset(){
+  const ys = [...new Set(allMonths().map(m=>m.slice(0,4)))];
+  S.dep = NAC; S.gran="m";
+  $("dep").value=NAC; $("gran").value="m";
+  $("desde").value = ys[0]; $("hasta").value = ys[ys.length-1];
+  if(S.tab!=="transferencias") $("desde").value = "2016";
+  render();
+}
+function limits(k){
+  // convierte años elegidos en índices de meses del dataset k
+  const ms = DATA[k].meses, y0=$("desde").value, y1=$("hasta").value;
+  let a = ms.findIndex(m=>m.slice(0,4)>=y0); if(a<0) a=ms.length;
+  let b = ms.length-1; while(b>=0 && ms[b].slice(0,4)>y1) b--;
+  return [a,b];
+}
+function agg(k, dep, a, b, gran){
+  const ms = DATA[k].meses, v = serie(k,dep), out = new Map();
+  for(let i=a;i<=b;i++){
+    const key = gran==="a" ? ms[i].slice(0,4) : ms[i];
+    out.set(key,(out.get(key)||0)+v[i]);
+  }
+  return out;
+}
+function setChart(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  Chart.defaults.color = css("--mute"); Chart.defaults.borderColor = css("--line");
+  charts[id] = new Chart($(id), cfg);
+}
+const opts = (extra={}) => Object.assign({responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label||""}: ${fmt(c.parsed.y ?? c.parsed.x)}`}}}},extra);
+
+function kpiHtml(k, a, b){
+  const ms = DATA[k].meses, v = serie(k,S.dep);
+  const sl = v.slice(a,b+1), tot = sl.reduce((x,y)=>x+y,0);
+  const nz = sl.filter((x,i)=>x>0).length || 1;
+  let pk = 0; sl.forEach((x,i)=>{ if(x>sl[pk]) pk=i; });
+  const n = ms.length;
+  const u12 = v.slice(n-12).reduce((x,y)=>x+y,0), p12 = v.slice(n-24,n-12).reduce((x,y)=>x+y,0);
+  const yoy = p12>0 ? (u12/p12-1)*100 : null;
+  const yoyTxt = yoy===null ? "—" : `<span class="${yoy>=0?"up":"down"}">${yoy>=0?"▲":"▼"} ${Math.abs(yoy).toFixed(1)}%</span>`;
+  return `
+  <div class="kpi"><small>Total en el periodo</small><b>${fmt(tot)}</b><span>${lbl(ms[a])} – ${lbl(ms[b])}</span></div>
+  <div class="kpi"><small>Promedio mensual</small><b>${fmt(tot/nz)}</b><span>meses con datos</span></div>
+  <div class="kpi"><small>Mes pico</small><b>${fmt(sl[pk])}</b><span>${lbl(ms[a+pk])}</span></div>
+  <div class="kpi"><small>Últimos 12 meses vs. 12 previos</small><b>${fmt(u12)}</b><span>${yoyTxt} · al ${lbl(ms[n-1])}</span></div>`;
+}
+
+function render(){
+  S.dep=$("dep").value; S.gran=$("gran").value;
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.k===S.tab));
+  const comp = S.tab==="comp";
+  $("grid2").style.display = "";
+  const ks = comp ? ["transferencias","sid"] : [S.tab];
+  const k0 = comp ? "sid" : S.tab;
+  const [a,b] = limits(k0);
+  $("sub").textContent = `SUNARP · ${S.dep==NAC?"Total nacional":S.dep} · datos hasta ${lbl(DATA[k0].meses.slice(-1)[0])}`;
+  const colors = {transferencias:css("--a"), sid:css("--b")};
+  const names = {transferencias:"Transferencias de propiedad", sid:"Compraventa predial SID"};
+
+  if(a>b){ $("kpis").innerHTML="<div class='kpi'>Sin datos para el rango elegido</div>"; return; }
+  $("kpis").innerHTML = comp ? "" : kpiHtml(k0,a,b);
+  if(comp){
+    const t=agg("transferencias",S.dep,...limits("transferencias"),"a"), s=agg("sid",S.dep,...limits("sid"),"a");
+    const T=[...t.values()].reduce((x,y)=>x+y,0), D=[...s.values()].reduce((x,y)=>x+y,0);
+    $("kpis").innerHTML = `
+      <div class="kpi"><small>Transferencias de propiedad</small><b>${fmt(T)}</b><span>total del periodo</span></div>
+      <div class="kpi"><small>Compraventa predial SID</small><b>${fmt(D)}</b><span>total del periodo</span></div>
+      <div class="kpi"><small>Relación SID/transf.</small><b>${T?(D/T*100).toFixed(1):"0"}%</b><span>SID / transferencias</span></div>`;
+  }
+
+  // gráfico 1: serie en el tiempo
+  $("t1").textContent = (comp?"Comparativo":names[k0]) + (S.gran==="a"?" · por año":" · por mes");
+  const base = agg(k0,S.dep,a,b,S.gran), labels=[...base.keys()];
+  setChart("c1",{type:S.gran==="a"?"bar":"line",
+    data:{labels:labels.map(l=>S.gran==="a"?l:lbl(l)),
+      datasets:ks.map(k=>{const m=agg(k,S.dep,limits(k)[0],limits(k)[1],S.gran);
+        return {label:names[k],data:labels.map(l=>m.get(l)??null),borderColor:colors[k],backgroundColor:colors[k]+(S.gran==="a"?"":"22"),
+          pointRadius:S.gran==="a"?0:0,borderWidth:2,tension:.25,fill:false,spanGaps:false}})},
+    options:opts({plugins:{legend:{display:comp},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}},x:{ticks:{maxTicksLimit:12}}}})});
+
+  $("t2").textContent = comp ? "Ranking por departamento (SID)" : "Ranking por departamento";
+  // gráfico 2: ranking de departamentos (en el rango)
+  const rk = Object.keys(DATA[k0].deps).map(d=>[d,DATA[k0].deps[d].slice(a,b+1).reduce((x,y)=>x+y,0)]).sort((x,y)=>y[1]-x[1]);
+  setChart("c2",{type:"bar",
+    data:{labels:rk.map(r=>r[0]),datasets:[{data:rk.map(r=>r[1]),
+      backgroundColor:rk.map(r=>r[0]===S.dep?css("--b"):css("--a"))}]},
+    options:opts({indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)}}},
+      scales:{x:{ticks:{callback:v=>fmt(v)}},y:{ticks:{autoSkip:false,font:{size:11}}}},
+      onClick:(e,els)=>{ if(els.length){ $("dep").value=rk[els[0].index][0]; render(); } }})});
+
+  // gráfico 3: estacionalidad (promedio por mes del año) o participación SID
+  if(comp){
+    $("t3").textContent="Relación SID / transferencias (%) · anual";
+    const t=agg("transferencias",S.dep,...limits("transferencias"),"a"), s=agg("sid",S.dep,a,b,"a");
+    const ys=[...s.keys()];
+    setChart("c3",{type:"bar",data:{labels:ys,datasets:[{data:ys.map(y=>t.get(y)?+((s.get(y)||0)/t.get(y)*100).toFixed(1):0),backgroundColor:css("--b")}]},
+      options:opts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+"%"}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>v+"%"}}}})});
+  } else {
+    $("t3").textContent="Estacionalidad · promedio por mes del año";
+    const v=serie(k0,S.dep), ms=DATA[k0].meses, sum=Array(12).fill(0), cnt=Array(12).fill(0);
+    for(let i=a;i<=b;i++){ if(v[i]>0){ const m=+ms[i].slice(5)-1; sum[m]+=v[i]; cnt[m]++; } }
+    setChart("c3",{type:"bar",data:{labels:MES.map(m=>m[0].toUpperCase()+m.slice(1)),datasets:[{data:sum.map((s,i)=>cnt[i]?Math.round(s/cnt[i]):0),backgroundColor:colors[k0]}]},
+      options:opts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}}}})});
+  }
+
+  // tabla
+  const cols = comp ? ks : [k0];
+  const mm = agg(k0,S.dep,a,b,"m"), keys=[...mm.keys()].reverse();
+  const allv = k=>{const [x,y]=limits(k); return agg(k,S.dep,0,DATA[k].meses.length-1,"m");};
+  const full = Object.fromEntries(ks.map(k=>[k,allv(k)]));
+  $("t4").textContent="Detalle mensual · "+(S.dep===NAC?"total nacional":S.dep);
+  const head = "<tr><th>Mes</th>"+cols.map(k=>`<th>${comp?names[k]:"Cantidad"}</th>${comp?"":"<th>Var. vs. mismo mes año anterior</th>"}`).join("")+(comp?"<th>Relación SID/transf.</th>":"")+"</tr>";
+  const prev = (k,m)=>full[k].get((+m.slice(0,4)-1)+m.slice(4));
+  $("tabla").innerHTML = head + keys.map(m=>{
+    let r=`<tr><td>${lbl(m)}</td>`;
+    cols.forEach(k=>{ const x=full[k].get(m)||0; r+=`<td>${fmt(x)}</td>`;
+      if(!comp){ const p=prev(k,m); r+= p>0 ? `<td class="${x>=p?"up":"down"}">${x>=p?"▲":"▼"} ${Math.abs((x/p-1)*100).toFixed(1)}%</td>` : "<td>—</td>"; }});
+    if(comp){ const t=full.transferencias.get(m)||0, d=full.sid.get(m)||0; r+=`<td>${t?(d/t*100).toFixed(1)+"%":"—"}</td>`; }
+    return r+"</tr>";
+  }).join("");
+  window.__tabla = {head:comp?["Mes",...cols.map(k=>names[k]),"Relacion SID/transferencias (%)"]:["Mes",names[k0]],
+    rows:keys.map(m=>comp?[m,full.transferencias.get(m)||0,full.sid.get(m)||0,(full.transferencias.get(m)?((full.sid.get(m)||0)/full.transferencias.get(m)*100).toFixed(1):"")]:[m,full[k0].get(m)||0])};
+}
+
+function csv(head, rows, name){
+  const t = [head,...rows].map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob(["﻿"+t],{type:"text/csv;charset=utf-8"}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{S.tab=t.dataset.k; if(S.tab!=="transferencias" && +$("desde").value<2016) $("desde").value="2016"; render();});
+["dep","desde","hasta","gran"].forEach(id=>$(id).onchange=render);
+$("reset").onclick=reset;
+$("dlTabla").onclick=()=>csv(__tabla.head,__tabla.rows,"detalle_mensual.csv");
+$("dlTodo").onclick=()=>{
+  const rows=[];
+  for(const k of ["transferencias","sid"]){ const d=DATA[k];
+    d.meses.forEach((m,i)=>{ rows.push([k,NAC,m,d.total[i]]); for(const dep in d.deps) rows.push([k,dep,m,d.deps[dep][i]]); }); }
+  csv(["serie","departamento","mes","cantidad"],rows,"sunarp_todos_los_datos.csv");
+};
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>render());
+initFilters();
+</script>
+</body>
+</html>
